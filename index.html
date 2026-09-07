@@ -2,463 +2,88 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚽ Respo‑Liga · Stadion · Wetter · Wahrheitslauf</title>
+<title>Dreieck‑Screen‑Emulator</title>
 <style>
-  * { box-sizing:border-box; margin:0; padding:0; }
   body {
-    background:#06070e; color:#e0e8f0; font-family:'Consolas','Segoe UI',monospace;
-    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
-  }
-  .container {
-    max-width:1400px; width:100%; background:rgba(12,16,28,0.7); backdrop-filter:blur(4px);
-    border-radius:28px; border:1px solid rgba(120,220,150,0.15); padding:24px 28px 32px;
-    box-shadow:0 20px 60px rgba(0,0,0,0.8);
-  }
-  header {
-    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
-    margin-bottom:16px; border-bottom:1px solid rgba(120,220,150,0.1); padding-bottom:12px;
-  }
-  header h1 {
-    font-size:24px; font-weight:300; letter-spacing:2px;
-    background:linear-gradient(135deg, #7ee0a0, #d8f0c0); -webkit-background-clip:text;
-    -webkit-text-fill-color:transparent; background-clip:text;
-  }
-  header .badge {
-    background:rgba(120,220,150,0.08); border:1px solid rgba(120,220,150,0.15);
-    border-radius:100px; padding:4px 18px; font-size:12px; color:#a0d0a8;
-  }
-  .note {
-    background:rgba(255,190,90,0.06); border:1px solid rgba(255,190,90,0.18);
-    border-radius:12px; padding:12px 16px; font-size:12px; line-height:1.6; color:#e8d8b8;
-    margin-bottom:16px;
-  }
-  .note b { color:#ffcf8c; }
-
-  .status-row {
-    display:flex; flex-wrap:wrap; gap:12px 24px;
-    background:rgba(0,0,0,0.3); border-radius:12px; padding:10px 16px;
-    margin-bottom:16px; font-size:13px; border:1px solid rgba(120,220,150,0.06);
-  }
-  .status-row .item { display:flex; align-items:center; gap:6px; }
-  .status-row .label { color:#7a8a9a; }
-  .status-row .value { color:#a0e0b0; font-weight:bold; }
-  .status-row .value.err { color:#ff6b6b; }
-
-  .grid-2 { display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; margin-bottom:16px; }
-  @media (max-width:900px){ .grid-2 { grid-template-columns:1fr; } }
-
-  .panel {
-    background:rgba(16,20,14,0.4); border:1px solid rgba(120,220,150,0.08);
-    border-radius:16px; padding:14px 18px; backdrop-filter:blur(2px);
-  }
-  .panel h2 {
-    font-size:14px; color:#b0e8c0; border-bottom:1px solid rgba(120,220,150,0.1);
-    padding-bottom:6px; margin-bottom:10px; letter-spacing:1px;
+    background:#111;
+    margin:0;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-family:Consolas, monospace;
   }
 
-  canvas {
-    display:block; width:100%; aspect-ratio:16/9; background:#000;
-    border-radius:16px; border:1px solid rgba(120,220,150,0.1);
-    margin-bottom:16px; box-shadow:inset 0 0 60px rgba(20,60,30,0.25);
+  .wrapper {
+    position:relative;
+    width:800px;
+    height:600px;
   }
 
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  thead th {
-    text-align:left; color:#8ab89a; font-weight:normal; padding:4px 6px;
-    border-bottom:1px solid rgba(120,220,150,0.15);
+  /* Linker 12° Screen */
+  .screen-left {
+    position:absolute;
+    width:260px;
+    height:400px;
+    background:#fff;
+    border:3px solid #000;
+    transform:skewY(-12deg);
+    left:0;
+    top:100px;
+    opacity:0.9;
   }
-  tbody td { padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.03); }
-  tbody tr.home { background:rgba(120,220,150,0.06); }
-  .pts { font-weight:bold; color:#ffcf8c; }
-  .rank { color:#7a8a9a; width:22px; }
-  .form-w { color:#8cf0a0; }
-  .form-d { color:#f0d080; }
-  .form-l { color:#ff6b6b; }
 
-  .cause-list { font-size:12px; line-height:1.7; color:#c8d8c0; }
-  .cause-list .arrow { color:#7ee0a0; }
-
-  .control-grid {
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
-    gap:8px; margin-bottom:14px;
+  /* Rechter 12° Screen */
+  .screen-right {
+    position:absolute;
+    width:260px;
+    height:400px;
+    background:#fff;
+    border:3px solid #000;
+    transform:skewY(12deg);
+    right:0;
+    top:100px;
+    opacity:0.9;
   }
-  .btn {
-    background:rgba(20,28,20,0.6); border:1px solid rgba(120,220,150,0.15);
-    border-radius:10px; padding:8px 4px; color:#c0d8c8; font-family:inherit;
-    font-size:12px; cursor:pointer; transition:all 0.25s; text-align:center;
-  }
-  .btn:hover { border-color:#7ee0a0; background:rgba(80,180,110,0.14); color:#fff; transform:translateY(-2px); }
-  .btn.primary { border-color:#7ee0a0; color:#7ee0a0; }
-  .btn.warn { border-color:#f0d080; color:#f0d080; }
-  .btn.danger { border-color:#ff6b6b; color:#ff6b6b; }
-  .btn.big { grid-column: span 2; }
 
-  .log-box {
-    background:rgba(0,0,0,0.4); border-radius:12px; padding:10px 14px;
-    font-size:12px; color:#8a9aaa; height:110px; overflow-y:auto;
-    border:1px solid rgba(120,220,150,0.05); line-height:1.6; margin-top:6px;
+  /* Front‑Screen 13° transparent */
+  .screen-front {
+    position:absolute;
+    width:300px;
+    height:300px;
+    background:rgba(255,255,255,0.15);
+    border:3px solid #000;
+    transform:skewX(13deg);
+    left:250px;
+    top:150px;
+    backdrop-filter:blur(3px);
   }
-  .log-box::-webkit-scrollbar { width:3px; }
-  .log-box::-webkit-scrollbar-thumb { background:#2a3a2a; border-radius:4px; }
 
-  .footer {
-    text-align:center; color:#3a4a5a; font-size:10px; margin-top:16px;
-    border-top:1px solid rgba(120,220,150,0.05); padding-top:10px;
+  /* Freie Innenfläche */
+  .inner-free {
+    position:absolute;
+    width:300px;
+    height:300px;
+    background:#fff;
+    border:3px solid #000;
+    left:250px;
+    top:150px;
+    z-index:-1;
   }
 </style>
 </head>
 <body>
-<div class="container">
 
-<header>
-  <h1>⚽ Respo‑Liga · Stadion · Wetter · Wahrheitslauf</h1>
-  <span class="badge">● Erklär‑ und Nutzungsmodell</span>
-</header>
+<div class="wrapper">
 
-<div class="note">
-  <b>Ehrlich vorab, mit Sachverstand:</b> Diese Seite läuft in jedem Browser (Handy, Laptop, Raspberry Pi, Smart‑TV) –
-  aber sie liest <b>keine echte Hardware</b> aus. CPU/GPU/RAM/Wetter waren im Original mit
-  <code>Math.sin()</code>/<code>Math.random()</code> erzeugte Kennzahlen, kein Sensorzugriff.
-  Browser‑JavaScript darf aus Sicherheitsgründen nicht auf reale Systemsensoren zugreifen.
-  Reale Werte bräuchten entweder eine native App/Systemleiste (z.B. Node.js mit dem Paket
-  <code>systeminformation</code>), oder echte Sensorhardware wie eine Raspberry‑Pi‑Wetterstation, die Daten
-  per API an diese Seite liefert. Als <b>reales Startwetter</b> habe ich hier die aktuelle Live‑Messung für
-  Hannover eingesetzt (16°C, bewölkt) – das ist ein echter Schnappschuss, kein laufender Live‑Abgleich.
+  <div class="screen-left"></div>
+  <div class="screen-right"></div>
+  <div class="screen-front"></div>
+
+  <!-- Freie Fläche für Benutzer -->
+  <div class="inner-free"></div>
+
 </div>
 
-<!-- STATUS -->
-<div class="status-row" id="statusRow">
-  <span class="item"><span class="label">SPIELTAG</span> <span class="value" id="matchdayDisplay">0</span></span>
-  <span class="item"><span class="label">HEIM‑SCORE</span> <span class="value" id="homeScoreDisplay">–</span></span>
-  <span class="item"><span class="label">WETTER</span> <span class="value" id="weatherState">bewölkt · 16°C</span></span>
-  <span class="item"><span class="label">WIRKUNG</span> <span class="value" id="effectDisplay">neutral</span></span>
-</div>
-
-<div class="grid-2">
-  <div>
-    <canvas id="mainCanvas" width="800" height="450"></canvas>
-
-    <div class="control-grid">
-      <button class="btn primary" id="btnMiss">🎯 MISS</button>
-      <button class="btn primary" id="btnFasil">⚖️ FASIL</button>
-      <button class="btn primary" id="btnFix">🔧 FIX</button>
-      <button class="btn primary" id="btnFit">📐 FIT</button>
-      <button class="btn warn" id="btnRecall">⏪ RECALL</button>
-      <button class="btn danger" id="btnRefinal">⚡ REFINAL</button>
-      <button class="btn big" id="btnSpieltag">⚽ SPIELTAG (Respo scannt Respo)</button>
-      <button class="btn" id="btnReset">⟲ RESET</button>
-      <button class="btn" id="btnPause">⏸ PAUSE</button>
-    </div>
-
-    <div class="log-box" id="logBox">[init] Respo‑Liga geladen …</div>
-  </div>
-
-  <div>
-    <div class="panel" style="margin-bottom:16px;">
-      <h2>🏆 Liga‑Tabelle (Respo scannt Respo)</h2>
-      <table>
-        <thead>
-          <tr><th class="rank">#</th><th>Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th class="pts">Pkt</th></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="panel">
-      <h2>🌦️ Ursache → Wirkung (aktueller Spieltag)</h2>
-      <div class="cause-list" id="causeList">Noch kein Spieltag gelaufen.</div>
-    </div>
-  </div>
-</div>
-
-<div class="footer">⚖️ iki1uc · QUEAST‑kompatibel · Respo‑Liga · Stadion/Wetter als Erklärmodell</div>
-</div>
-
-<script>
-"use strict";
-
-// ================================================================
-//  RESPO‑LIGA · STADION · WETTER · WAHRHEITSLAUF
-//
-//  Erklärmodell: das Heim‑Stadion (81 Slots, 9x9) liefert wie zuvor
-//  einen Messwert/Score pro Slot (Mittelwert = HEIM‑SCORE).
-//  Zusätzlich gibt es mehrere Respo‑Teams (Gegner). Beim SPIELTAG
-//  "scannt" der Heim‑Respo jeden Gegner‑Respo: aus dessen eigenem
-//  Potenzial + der aktuellen Wetterlage wird ein Wirkungs‑Score
-//  berechnet (klare Ursache→Wirkung‑Kette, keine Zufalls‑Blackbox).
-//  Die Tabelle ist das Ergebnis dieser Scans, kumulativ über Spieltage.
-// ================================================================
-
-// ─── CANVAS (Heim‑Stadion, wie ATOM/Kompetenz‑Station) ─────────
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
-
-const TOTAL_SLOTS = 81, COLS = 9, ROWS = 9;
-const CELL_W = W / COLS, CELL_H = H / ROWS;
-const TOLERANCE = 0.15;
-
-let slots = [];
-let running = true;
-let time = 0;
-let matchday = 0;
-
-// ─── Reales Start‑Wetter (Live‑Snapshot Hannover) ──────────────
-// Quelle: aktuelle Messung zum Erstellzeitpunkt dieser Seite.
-let weather = {
-  temp: 16,          // °C
-  condition: 'bewölkt',
-  precipChance: 25,   // % Regenwahrscheinlichkeit heute
-};
-
-// ─── Respo‑Teams (Gegner) ───────────────────────────────────────
-// potenzial       = Grund‑Stärke (0..1), fix pro Team definiert
-// wetterAnfaelligkeit = wie stark Wetter den Score drückt/hebt (0..1)
-// Punkte/S/U/N    = Liga‑Tabellenstatistik über mehrere Spieltage
-const teams = [
-  { name: 'FC Atom',        potenzial: 0.82, wetterAnfaelligkeit: 0.15, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'SV Wahrheit',    potenzial: 0.74, wetterAnfaelligkeit: 0.35, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'IQQ Athletic',   potenzial: 0.68, wetterAnfaelligkeit: 0.55, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'Kompetenz FC',   potenzial: 0.90, wetterAnfaelligkeit: 0.10, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'Stadion Real',   potenzial: 0.60, wetterAnfaelligkeit: 0.70, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-];
-
-// ─── INIT SLOTS (Heim‑Stadion Messfeld) ────────────────────────
-function initSlots() {
-  slots = [];
-  for (let i = 0; i < TOTAL_SLOTS; i++) {
-    const v = Math.sin(i * 0.2 + 0.5);
-    slots.push({
-      value: v, truth: 0, pulse: 0, drift: 0,
-      angle: (i * 37) % 360, targetValue: v,
-      deviation: Math.abs(v), score: 1 - Math.min(Math.abs(v), 1)
-    });
-  }
-}
-initSlots();
-
-function computeDeviationAndScore(s) {
-  s.deviation = Math.abs(s.value - s.truth);
-  s.score = Math.max(0, 1 - Math.min(s.deviation, 1));
-}
-
-function homeScore() {
-  for (const s of slots) computeDeviationAndScore(s);
-  return slots.reduce((sum, s) => sum + s.score, 0) / TOTAL_SLOTS;
-}
-
-// ─── WETTER‑WIRKUNGSFUNKTION (klare Ursache → Wirkung) ─────────
-// Kalt/nass wirkt dämpfend, mild/trocken neutral bis leicht fördernd.
-// modifier in [-0.25 .. +0.08], skaliert mit wetterAnfaelligkeit des Teams.
-function wetterModifier(anfaelligkeit) {
-  let base = 0;
-  if (weather.temp < 8)       base -= 0.18;         // Kälte bremst
-  else if (weather.temp > 26) base -= 0.10;          // Hitze bremst leicht
-  else                         base += 0.05;          // mildes Wetter hilft leicht
-  if (weather.precipChance > 40) base -= 0.15;        // Regen/Nässe bremst
-  return base * anfaelligkeit;
-}
-
-// ─── STATUS UI ──────────────────────────────────────────────────
-function updateStatus() {
-  const hs = homeScore();
-  document.getElementById('homeScoreDisplay').textContent = Math.round(hs * 100) + '%';
-  document.getElementById('matchdayDisplay').textContent = matchday;
-  document.getElementById('weatherState').textContent =
-    `${weather.condition} · ${weather.temp}°C`;
-}
-
-function renderTable() {
-  const sorted = [...teams].sort((a,b) => b.pkt - a.pkt || b.letzterScore - a.letzterScore);
-  const body = document.getElementById('tableBody');
-  body.innerHTML = '';
-  sorted.forEach((t, i) => {
-    const row = document.createElement('tr');
-    row.innerHTML = `<td class="rank">${i+1}</td><td>${t.name}</td>
-      <td>${t.s+t.u+t.n}</td><td class="form-w">${t.s}</td><td class="form-d">${t.u}</td><td class="form-l">${t.n}</td>
-      <td class="pts">${t.pkt}</td>`;
-    body.appendChild(row);
-  });
-}
-
-// ─── LOG ──────────────────────────────────────────────────────
-function log(msg) {
-  const box = document.getElementById('logBox');
-  const timeStr = new Date().toLocaleTimeString();
-  const entry = document.createElement('div');
-  entry.textContent = `[${timeStr}] ${msg}`;
-  box.appendChild(entry);
-  box.scrollTop = box.scrollHeight;
-  if (box.children.length > 60) box.removeChild(box.firstChild);
-}
-
-// ─── MESS‑/KALIBRIERFUNKTIONEN (Heim‑Stadion) ──────────────────
-function doMiss() {
-  const hs = homeScore();
-  log(`🎯 MISS → Heim‑Messung: Score ${Math.round(hs*100)}%`);
-  updateStatus();
-}
-function doFasil() {
-  const avg = slots.reduce((sum, s) => sum + s.value, 0) / TOTAL_SLOTS;
-  for (const s of slots) { s.value = s.value*0.6 + avg*0.4; s.targetValue = s.value; s.pulse*=0.8; s.drift*=0.8; }
-  log('⚖️ FASIL → Heim‑Stadion kalibriert'); updateStatus();
-}
-function doFix() {
-  let fixed = 0;
-  for (const s of slots) {
-    if (s.value > 1.5 || s.value < -1.5) { s.value = Math.sign(s.value)*1.2; fixed++; }
-    s.pulse = Math.min(Math.max(s.pulse,-1),1); s.drift = Math.min(Math.max(s.drift,-1),1);
-    s.angle = ((s.angle%360)+360)%360;
-  }
-  log(`🔧 FIX → ${fixed} Ausreißer korrigiert`); updateStatus();
-}
-function doFit() {
-  for (let i=0;i<TOTAL_SLOTS;i++){
-    const s = slots[i]; const phase = i*0.2 + time*0.0003;
-    s.targetValue = Math.sin(phase)*0.9; s.value = s.value*0.5 + s.targetValue*0.5;
-    s.pulse = Math.sin(time/120+i*0.1)*0.6; s.drift = Math.cos(time/240+i*0.05)*0.5;
-    s.angle = (time/10+i*4)%360;
-  }
-  log('📐 FIT → Referenzkurve angelegt'); updateStatus();
-}
-function doRecall() {
-  initSlots();
-  log('⏪ RECALL → Heim‑Stadion zurückgesetzt'); updateStatus();
-}
-function doRefinal() {
-  for (const s of slots) {
-    s.value = Math.sin(s.angle*Math.PI/180)*0.5; s.targetValue = s.value; s.pulse=0; s.drift=0;
-    s.angle = (s.angle+10)%360;
-  }
-  log('⚡ REFINAL → vollständige Neukalibrierung'); updateStatus();
-}
-
-// ─── SPIELTAG: Respo scannt Respo ──────────────────────────────
-function doSpieltag() {
-  matchday++;
-  const hs = homeScore();
-  const causeLines = [];
-  causeLines.push(
-    `<div><b>Ursache:</b> Wetter ${weather.condition}, ${weather.temp}°C, Regenchance ${weather.precipChance}% ` +
-    `<span class="arrow">→</span> <b>Wirkung:</b> je Team abhängig von Wetteranfälligkeit</div>`
-  );
-
-  for (const t of teams) {
-    const mod = wetterModifier(t.wetterAnfaelligkeit);
-    const teamScore = Math.max(0, Math.min(1, t.potenzial + mod));
-    t.letzterScore = teamScore;
-
-    // Heim‑Respo (hs) scannt Gegner‑Respo (teamScore) → Ergebnis
-    let resultTxt, effect;
-    if (hs > teamScore + 0.03) { t.s++; t.pkt += 0; effect = 'Heim gewinnt'; resultTxt = 'S (Heim)'; }
-    else if (teamScore > hs + 0.03) { t.n++; t.pkt += 3; effect = 'Gegner gewinnt'; resultTxt = 'N (Heim) / 3 Pkt Gegner'; }
-    else { t.u++; t.pkt += 1; effect = 'Unentschieden'; resultTxt = 'U / 1 Pkt'; }
-
-    causeLines.push(
-      `<div>${t.name}: Potenzial ${(t.potenzial*100).toFixed(0)}% ` +
-      `<span class="arrow">→</span> Wetter‑Modifikator ${(mod*100).toFixed(1)}% ` +
-      `<span class="arrow">→</span> Score ${(teamScore*100).toFixed(0)}% vs. Heim ${(hs*100).toFixed(0)}% ` +
-      `<span class="arrow">→</span> ${effect} (${resultTxt})</div>`
-    );
-  }
-
-  document.getElementById('causeList').innerHTML = causeLines.join('');
-  document.getElementById('effectDisplay').textContent =
-    weather.precipChance > 40 || weather.temp < 8 ? 'dämpfend' : 'neutral/fördernd';
-  renderTable();
-  log(`⚽ SPIELTAG ${matchday} → Heim‑Respo hat ${teams.length} Gegner‑Respo gescannt und bewertet`);
-  updateStatus();
-}
-
-// ─── RENDER: Heim‑Stadion Messfeld ─────────────────────────────
-function drawStadium() {
-  ctx.clearRect(0,0,W,H);
-  const bg = ctx.createLinearGradient(0,0,0,H);
-  bg.addColorStop(0,'#04140a'); bg.addColorStop(1,'#081c10');
-  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
-
-  // Spielfeld‑Andeutung: Mittellinie + Mittelkreis
-  ctx.strokeStyle = 'rgba(200,255,220,0.08)'; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
-  ctx.beginPath(); ctx.arc(W/2,H/2,60,0,Math.PI*2); ctx.stroke();
-
-  for (let r=0;r<ROWS;r++){
-    for (let c=0;c<COLS;c++){
-      const idx = r*COLS+c; const s = slots[idx]; computeDeviationAndScore(s);
-      const x = c*CELL_W, y = r*CELL_H;
-      const score = s.score;
-      const heightOffset = s.value * CELL_H * 0.15;
-      const gCol = Math.round(90 + score*140);
-      const rCol = Math.round(200*(1-score) + 40*score);
-      ctx.fillStyle = `rgba(${rCol}, ${gCol}, 60, 0.30)`;
-      ctx.fillRect(x, y+heightOffset*0.3, CELL_W, CELL_H*0.7);
-
-      const inTol = s.deviation <= TOLERANCE;
-      ctx.strokeStyle = inTol ? `rgba(140,240,160,${0.15+score*0.2})` : `rgba(255,120,90,${0.15+(1-score)*0.2})`;
-      ctx.lineWidth = 0.6 + (1-score)*0.8;
-      ctx.strokeRect(x, y+heightOffset*0.2, CELL_W, CELL_H*0.6);
-
-      ctx.fillStyle = `rgba(220,240,220,${0.12+score*0.15})`;
-      ctx.font = '8px Consolas'; ctx.textAlign='center'; ctx.textBaseline='bottom';
-      ctx.fillText(s.value.toFixed(2), x+CELL_W/2, y+CELL_H-4);
-    }
-  }
-
-  ctx.fillStyle = 'rgba(150,230,170,0.08)';
-  ctx.font = '14px Consolas'; ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText(`Heim‑Stadion · Messfeld · Spieltag ${matchday}`, W/2, 10);
-}
-
-// ─── UPDATE ──────────────────────────────────────────────────
-function updateSlots() {
-  for (const s of slots) {
-    s.value += (s.targetValue - s.value) * 0.008;
-    s.pulse += Math.sin(time*0.001 + s.angle*0.01) * 0.001;
-    s.drift += Math.cos(time*0.002 + s.angle*0.02) * 0.001;
-    s.pulse = Math.min(Math.max(s.pulse,-1),1); s.drift = Math.min(Math.max(s.drift,-1),1);
-    s.angle = (s.angle + 0.02) % 360;
-  }
-}
-
-function loop() {
-  if (running) {
-    time += 16; updateSlots(); drawStadium();
-    if (Math.floor(time/2000)%2===0) updateStatus();
-  }
-  requestAnimationFrame(loop);
-}
-
-// ─── EVENTS ──────────────────────────────────────────────────
-document.getElementById('btnPause').addEventListener('click', () => {
-  running = !running;
-  document.getElementById('btnPause').textContent = running ? '⏸ PAUSE' : '▶ START';
-  log(running ? '▶ Fortgesetzt' : '⏸ Pausiert');
-});
-document.getElementById('btnMiss').addEventListener('click', doMiss);
-document.getElementById('btnFasil').addEventListener('click', doFasil);
-document.getElementById('btnFix').addEventListener('click', doFix);
-document.getElementById('btnFit').addEventListener('click', doFit);
-document.getElementById('btnRecall').addEventListener('click', doRecall);
-document.getElementById('btnRefinal').addEventListener('click', doRefinal);
-document.getElementById('btnSpieltag').addEventListener('click', doSpieltag);
-document.getElementById('btnReset').addEventListener('click', () => {
-  initSlots(); matchday = 0;
-  for (const t of teams) { t.pkt=0; t.s=0; t.u=0; t.n=0; t.letzterScore=0; }
-  document.getElementById('causeList').textContent = 'Noch kein Spieltag gelaufen.';
-  renderTable();
-  log('⟲ RESET → Stadion & Liga neu gestartet');
-  updateStatus();
-});
-
-// ─── INIT ──────────────────────────────────────────────────────
-renderTable();
-log('⚽ Respo‑Liga initialisiert · Heim‑Stadion bereit');
-log(`🌦️ Start‑Wetter (Live‑Snapshot Hannover): ${weather.condition}, ${weather.temp}°C, Regenchance ${weather.precipChance}%`);
-log('⌨️  Klicke SPIELTAG, damit der Heim‑Respo alle Gegner‑Respo scannt und bewertet');
-updateStatus();
-loop();
-
-</script>
 </body>
 </html>
