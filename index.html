@@ -2,87 +2,117 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Dreieck‑Screen‑Emulator</title>
+<title>Dreieck‑Screen‑Emulator · Kill‑Bill‑Move</title>
 <style>
   body {
-    background:#111;
+    background:#0a0a0a;
     margin:0;
     height:100vh;
     display:flex;
     justify-content:center;
     align-items:center;
     font-family:Consolas, monospace;
+    overflow:hidden;
   }
 
-  .wrapper {
+  .scene {
     position:relative;
-    width:800px;
+    width:900px;
     height:600px;
+    perspective:1600px;
   }
 
-  /* Linker 12° Screen */
-  .screen-left {
+  /* Linker Screen – 12° nach innen */
+  .left {
     position:absolute;
     width:260px;
-    height:400px;
-    background:#fff;
+    height:420px;
+    background:linear-gradient(135deg, #00aaff, #0066ff);
     border:3px solid #000;
-    transform:skewY(-12deg);
-    left:0;
+    transform:
+      rotateY(12deg)
+      translateX(-200px)
+      translateZ(80px)
+      rotateX(2deg);
     top:100px;
-    opacity:0.9;
+    box-shadow:0 0 40px rgba(0,150,255,0.6);
   }
 
-  /* Rechter 12° Screen */
-  .screen-right {
+  /* Rechter Screen – 12° nach innen */
+  .right {
     position:absolute;
     width:260px;
-    height:400px;
-    background:#fff;
+    height:420px;
+    background:linear-gradient(135deg, #ff00aa, #cc0088);
     border:3px solid #000;
-    transform:skewY(12deg);
-    right:0;
+    transform:
+      rotateY(-12deg)
+      translateX(200px)
+      translateZ(80px)
+      rotateX(2deg);
     top:100px;
-    opacity:0.9;
+    box-shadow:0 0 40px rgba(255,0,150,0.6);
   }
 
-  /* Front‑Screen 13° transparent */
-  .screen-front {
+  /* Front‑Screen – 13° transparent */
+  .front {
     position:absolute;
-    width:300px;
-    height:300px;
-    background:rgba(255,255,255,0.15);
+    width:320px;
+    height:320px;
+    background:rgba(255,255,255,0.12);
     border:3px solid #000;
-    transform:skewX(13deg);
-    left:250px;
+    transform:
+      rotateX(13deg)
+      translateZ(140px);
+    left:290px;
     top:150px;
-    backdrop-filter:blur(3px);
+    backdrop-filter:blur(4px);
+    box-shadow:0 0 30px rgba(255,255,255,0.3);
   }
 
-  /* Freie Innenfläche */
-  .inner-free {
+  /* Innenfläche – frei */
+  .inner {
     position:absolute;
-    width:300px;
-    height:300px;
+    width:320px;
+    height:320px;
     background:#fff;
     border:3px solid #000;
-    left:250px;
+    left:290px;
     top:150px;
+    transform:translateZ(0px);
     z-index:-1;
+  }
+
+  /* Boden – rötlich */
+  .floor {
+    position:absolute;
+    width:900px;
+    height:200px;
+    background:linear-gradient(to bottom, #662222, #330000);
+    bottom:0;
+    transform:rotateX(80deg) translateZ(-200px);
+    box-shadow:0 -40px 80px rgba(255,0,0,0.3);
+  }
+
+  /* Hintergrund – metallisch */
+  .back {
+    position:absolute;
+    width:900px;
+    height:600px;
+    background:linear-gradient(135deg, #222, #111, #333);
+    transform:translateZ(-400px);
   }
 </style>
 </head>
 <body>
 
-<div class="wrapper">
-
-  <div class="screen-left"></div>
-  <div class="screen-right"></div>
-  <div class="screen-front"></div>
-
-  <!-- Freie Fläche für Benutzer -->
-  <div class="inner-free"></div>
-
+<div class="scene">
+  <div class="back"></div>
+  <div class="floor"></div>
+  <div class="left"></div>
+  <div class="right"></div>
+  <div class="front"></div>
+  <div class="inner"></div>
 </div>
 
 </body>
