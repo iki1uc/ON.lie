@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Dreieck‑Screen‑Emulator · Kill‑Bill‑Move</title>
+<title>Körper‑Geometrie‑Emulator</title>
 <style>
   body {
     background:#0a0a0a;
@@ -15,15 +15,15 @@
     overflow:hidden;
   }
 
-  .scene {
+  .body {
     position:relative;
     width:900px;
     height:600px;
-    perspective:1600px;
+    perspective:1800px;
   }
 
-  /* Linker Screen – 12° nach innen */
-  .left {
+  /* Linke Schulter (12°) */
+  .shoulder-left {
     position:absolute;
     width:260px;
     height:420px;
@@ -31,15 +31,14 @@
     border:3px solid #000;
     transform:
       rotateY(12deg)
-      translateX(-200px)
-      translateZ(80px)
-      rotateX(2deg);
+      translateX(-220px)
+      translateZ(120px)
+      rotateX(4deg);
     top:100px;
-    box-shadow:0 0 40px rgba(0,150,255,0.6);
   }
 
-  /* Rechter Screen – 12° nach innen */
-  .right {
+  /* Rechte Schulter (12°) */
+  .shoulder-right {
     position:absolute;
     width:260px;
     height:420px;
@@ -47,15 +46,14 @@
     border:3px solid #000;
     transform:
       rotateY(-12deg)
-      translateX(200px)
-      translateZ(80px)
-      rotateX(2deg);
+      translateX(220px)
+      translateZ(120px)
+      rotateX(4deg);
     top:100px;
-    box-shadow:0 0 40px rgba(255,0,150,0.6);
   }
 
-  /* Front‑Screen – 13° transparent */
-  .front {
+  /* Kopf (13° transparent) */
+  .head {
     position:absolute;
     width:320px;
     height:320px;
@@ -63,15 +61,14 @@
     border:3px solid #000;
     transform:
       rotateX(13deg)
-      translateZ(140px);
+      translateZ(180px);
     left:290px;
     top:150px;
     backdrop-filter:blur(4px);
-    box-shadow:0 0 30px rgba(255,255,255,0.3);
   }
 
-  /* Innenfläche – frei */
-  .inner {
+  /* Torso (freie Fläche) */
+  .torso {
     position:absolute;
     width:320px;
     height:320px;
@@ -82,37 +79,15 @@
     transform:translateZ(0px);
     z-index:-1;
   }
-
-  /* Boden – rötlich */
-  .floor {
-    position:absolute;
-    width:900px;
-    height:200px;
-    background:linear-gradient(to bottom, #662222, #330000);
-    bottom:0;
-    transform:rotateX(80deg) translateZ(-200px);
-    box-shadow:0 -40px 80px rgba(255,0,0,0.3);
-  }
-
-  /* Hintergrund – metallisch */
-  .back {
-    position:absolute;
-    width:900px;
-    height:600px;
-    background:linear-gradient(135deg, #222, #111, #333);
-    transform:translateZ(-400px);
-  }
 </style>
 </head>
 <body>
 
-<div class="scene">
-  <div class="back"></div>
-  <div class="floor"></div>
-  <div class="left"></div>
-  <div class="right"></div>
-  <div class="front"></div>
-  <div class="inner"></div>
+<div class="body">
+  <div class="shoulder-left"></div>
+  <div class="shoulder-right"></div>
+  <div class="head"></div>
+  <div class="torso"></div>
 </div>
 
 </body>
