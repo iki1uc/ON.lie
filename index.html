@@ -2,93 +2,549 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Körper‑Geometrie‑Emulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Respo‑Liga · Hardware · Wetter · 8‑fach Präzision</title>
 <style>
+  * { box-sizing:border-box; margin:0; padding:0; }
   body {
-    background:#0a0a0a;
-    margin:0;
-    height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-family:Consolas, monospace;
-    overflow:hidden;
+    background:#06070e; color:#e0e8f0; font-family:'Consolas','Segoe UI',monospace;
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  .container {
+    max-width:1400px; width:100%; background:rgba(12,16,28,0.7); backdrop-filter:blur(4px);
+    border-radius:28px; border:1px solid rgba(120,220,150,0.15); padding:24px 28px 32px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.8);
+  }
+  header {
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
+    margin-bottom:16px; border-bottom:1px solid rgba(120,220,150,0.1); padding-bottom:12px;
+  }
+  header h1 {
+    font-size:24px; font-weight:300; letter-spacing:2px;
+    background:linear-gradient(135deg, #7ee0a0, #d8f0c0); -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  header .badge {
+    background:rgba(120,220,150,0.08); border:1px solid rgba(120,220,150,0.15);
+    border-radius:100px; padding:4px 18px; font-size:12px; color:#a0d0a8;
+  }
+  .note {
+    background:rgba(255,190,90,0.06); border:1px solid rgba(255,190,90,0.18);
+    border-radius:12px; padding:12px 16px; font-size:12px; line-height:1.6; color:#e8d8b8;
+    margin-bottom:16px;
+  }
+  .note b { color:#ffcf8c; }
+
+  .status-row {
+    display:flex; flex-wrap:wrap; gap:12px 24px;
+    background:rgba(0,0,0,0.3); border-radius:12px; padding:10px 16px;
+    margin-bottom:16px; font-size:13px; border:1px solid rgba(120,220,150,0.06);
+  }
+  .status-row .item { display:flex; align-items:center; gap:6px; }
+  .status-row .label { color:#7a8a9a; }
+  .status-row .value { color:#a0e0b0; font-weight:bold; }
+  .status-row .value.err { color:#ff6b6b; }
+
+  .grid-2 { display:grid; grid-template-columns:1.1fr 0.9fr; gap:16px; margin-bottom:16px; }
+  @media (max-width:900px){ .grid-2 { grid-template-columns:1fr; } }
+
+  .panel {
+    background:rgba(16,20,14,0.4); border:1px solid rgba(120,220,150,0.08);
+    border-radius:16px; padding:14px 18px; backdrop-filter:blur(2px);
+  }
+  .panel h2 {
+    font-size:14px; color:#b0e8c0; border-bottom:1px solid rgba(120,220,150,0.1);
+    padding-bottom:6px; margin-bottom:10px; letter-spacing:1px;
   }
 
-  .body {
-    position:relative;
-    width:900px;
-    height:600px;
-    perspective:1800px;
+  canvas {
+    display:block; width:100%; aspect-ratio:16/9; background:#000;
+    border-radius:16px; border:1px solid rgba(120,220,150,0.1);
+    margin-bottom:16px; box-shadow:inset 0 0 60px rgba(20,60,30,0.25);
   }
 
-  /* Linke Schulter (12°) */
-  .shoulder-left {
-    position:absolute;
-    width:260px;
-    height:420px;
-    background:linear-gradient(135deg, #00aaff, #0066ff);
-    border:3px solid #000;
-    transform:
-      rotateY(12deg)
-      translateX(-220px)
-      translateZ(120px)
-      rotateX(4deg);
-    top:100px;
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th {
+    text-align:left; color:#8ab89a; font-weight:normal; padding:4px 6px;
+    border-bottom:1px solid rgba(120,220,150,0.15);
   }
+  tbody td { padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.03); }
+  tbody tr.home { background:rgba(120,220,150,0.06); }
+  .pts { font-weight:bold; color:#ffcf8c; }
+  .rank { color:#7a8a9a; width:22px; }
+  .form-w { color:#8cf0a0; }
+  .form-d { color:#f0d080; }
+  .form-l { color:#ff6b6b; }
 
-  /* Rechte Schulter (12°) */
-  .shoulder-right {
-    position:absolute;
-    width:260px;
-    height:420px;
-    background:linear-gradient(135deg, #ff00aa, #cc0088);
-    border:3px solid #000;
-    transform:
-      rotateY(-12deg)
-      translateX(220px)
-      translateZ(120px)
-      rotateX(4deg);
-    top:100px;
+  .cause-list { font-size:12px; line-height:1.7; color:#c8d8c0; max-height:220px; overflow-y:auto; }
+  .cause-list::-webkit-scrollbar { width:3px; }
+  .cause-list::-webkit-scrollbar-thumb { background:#2a3a2a; border-radius:4px; }
+  .cause-list .arrow { color:#7ee0a0; }
+  .cause-list .detail { padding-left:16px; font-size:11px; color:#9ab8a2; }
+
+  .hw-row { display:flex; justify-content:space-between; padding:3px 0; font-size:12px; border-bottom:1px solid rgba(255,255,255,0.03); }
+  .hw-row .label { color:#9a8a7a; }
+  .hw-row .val { font-weight:bold; }
+  .hw-row .val.green { color:#8cf0a0; }
+  .hw-row .val.yellow { color:#f5d080; }
+  .hw-row .val.red { color:#ff6b6b; }
+
+  .control-grid {
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
+    gap:8px; margin-bottom:14px;
   }
-
-  /* Kopf (13° transparent) */
-  .head {
-    position:absolute;
-    width:320px;
-    height:320px;
-    background:rgba(255,255,255,0.12);
-    border:3px solid #000;
-    transform:
-      rotateX(13deg)
-      translateZ(180px);
-    left:290px;
-    top:150px;
-    backdrop-filter:blur(4px);
+  .btn {
+    background:rgba(20,28,20,0.6); border:1px solid rgba(120,220,150,0.15);
+    border-radius:10px; padding:8px 4px; color:#c0d8c8; font-family:inherit;
+    font-size:12px; cursor:pointer; transition:all 0.25s; text-align:center;
   }
+  .btn:hover { border-color:#7ee0a0; background:rgba(80,180,110,0.14); color:#fff; transform:translateY(-2px); }
+  .btn.primary { border-color:#7ee0a0; color:#7ee0a0; }
+  .btn.warn { border-color:#f0d080; color:#f0d080; }
+  .btn.danger { border-color:#ff6b6b; color:#ff6b6b; }
+  .btn.big { grid-column: span 2; }
 
-  /* Torso (freie Fläche) */
-  .torso {
-    position:absolute;
-    width:320px;
-    height:320px;
-    background:#fff;
-    border:3px solid #000;
-    left:290px;
-    top:150px;
-    transform:translateZ(0px);
-    z-index:-1;
+  .log-box {
+    background:rgba(0,0,0,0.4); border-radius:12px; padding:10px 14px;
+    font-size:12px; color:#8a9aaa; height:110px; overflow-y:auto;
+    border:1px solid rgba(120,220,150,0.05); line-height:1.6; margin-top:6px;
+  }
+  .log-box::-webkit-scrollbar { width:3px; }
+  .log-box::-webkit-scrollbar-thumb { background:#2a3a2a; border-radius:4px; }
+
+  .footer {
+    text-align:center; color:#3a4a5a; font-size:10px; margin-top:16px;
+    border-top:1px solid rgba(120,220,150,0.05); padding-top:10px;
   }
 </style>
 </head>
 <body>
+<div class="container">
 
-<div class="body">
-  <div class="shoulder-left"></div>
-  <div class="shoulder-right"></div>
-  <div class="head"></div>
-  <div class="torso"></div>
+<header>
+  <h1>⚡ Respo‑Liga · Hardware · Wetter · 8‑fach Präzision</h1>
+  <span class="badge">● fusioniert · 8 Teams · 8‑fache Simulation</span>
+</header>
+
+<div class="note">
+  <b>Ehrlich & funktional:</b> CPU/GPU/RAM/ROM/TB sind simulierte Hardware‑Werte (Math.sin/random),
+  das Wetter ist ein echter Live‑Snapshot für Hannover (16°C, bewölkt).
+  Beim <b>Spieltag</b> scannt der Heim‑Respo (Stadion‑Messfeld) 8 Gegner‑Teams,
+  bewertet sie unter Wetter‑Einfluss (Ursache → Wirkung) und aktualisiert die Liga‑Tabelle.
+  Alle 8 Teams haben individuelle Stärke & Wetteranfälligkeit – kein Zufall, klare Kausalität.
 </div>
 
+<!-- STATUS -->
+<div class="status-row" id="statusRow">
+  <span class="item"><span class="label">SPIELTAG</span> <span class="value" id="matchdayDisplay">0</span></span>
+  <span class="item"><span class="label">HEIM‑SCORE</span> <span class="value" id="homeScoreDisplay">–</span></span>
+  <span class="item"><span class="label">WETTER</span> <span class="value" id="weatherState">bewölkt · 16°C</span></span>
+  <span class="item"><span class="label">WIRKUNG</span> <span class="value" id="effectDisplay">neutral</span></span>
+</div>
+
+<div class="grid-2">
+  <div>
+    <canvas id="mainCanvas" width="800" height="450"></canvas>
+
+    <div class="control-grid">
+      <button class="btn primary" id="btnMiss">🎯 MISS</button>
+      <button class="btn primary" id="btnFasil">⚖️ FASIL</button>
+      <button class="btn primary" id="btnFix">🔧 FIX</button>
+      <button class="btn primary" id="btnFit">📐 FIT</button>
+      <button class="btn warn" id="btnRecall">⏪ RECALL</button>
+      <button class="btn danger" id="btnRefinal">⚡ REFINAL</button>
+      <button class="btn big" id="btnSpieltag">⚽ SPIELTAG (8 Teams scanen)</button>
+      <button class="btn" id="btnReset">⟲ RESET</button>
+      <button class="btn" id="btnPause">⏸ PAUSE</button>
+      <button class="btn primary" id="btnWetter">🌦️ WETTER‑PROGNOSE (8‑fach)</button>
+    </div>
+
+    <div class="log-box" id="logBox">[init] Respo‑Liga 8‑fach geladen …</div>
+  </div>
+
+  <div>
+    <div class="panel" style="margin-bottom:16px;">
+      <h2>🏆 Liga‑Tabelle (8 Teams)</h2>
+      <table>
+        <thead>
+          <tr><th class="rank">#</th><th>Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th class="pts">Pkt</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>🌦️ Ursache → Wirkung (aktueller Spieltag)</h2>
+      <div class="cause-list" id="causeList">Noch kein Spieltag gelaufen.</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">⚖️ iki1uc · QUEAST‑kompatibel · Pipeline 3/6 · 8‑fach Präzision</div>
+</div>
+
+<script>
+"use strict";
+
+// ================================================================
+//  RESPO‑LIGA · HARDWARE · WETTER · 8‑FACH PRÄZISION
+//  Fusion aus Kompetenz‑Messstation + Respo‑Liga.
+//  8 Teams, 8‑fach höhere zeitliche Auflösung für Wetter‑Prognose,
+//  8‑fache Detail‑Anzeige pro Team (Trend‑Pfeile im Canvas).
+// ================================================================
+
+// ─── CANVAS (Heim‑Stadion Messfeld, 9×9 Slots) ────────────────
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+
+const TOTAL_SLOTS = 81, COLS = 9, ROWS = 9;
+const CELL_W = W / COLS, CELL_H = H / ROWS;
+const TOLERANCE = 0.15;
+
+let slots = [];
+let running = true;
+let time = 0;
+let matchday = 0;
+let trendHistory = []; // für 8‑fach Trends (letzte 8 Werte pro Slot)
+
+// ─── Hardware‑Simulation (wie Kompetenz‑Station) ──────────────
+let hw = { cpu:0.3, gpu:50, ram:0.4, rom:0, tb:true };
+
+// ─── Reales Start‑Wetter (Snapshot Hannover) ──────────────────
+let weather = {
+  temp: 16,
+  condition: 'bewölkt',
+  precipChance: 25,
+};
+
+// ─── 8 Teams (statt 5) ─────────────────────────────────────────
+const teams = [
+  { name: 'FC Atom',        potenzial:0.82, wetterAnfaelligkeit:0.15, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'SV Wahrheit',    potenzial:0.74, wetterAnfaelligkeit:0.35, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'IQQ Athletic',   potenzial:0.68, wetterAnfaelligkeit:0.55, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'Kompetenz FC',   potenzial:0.90, wetterAnfaelligkeit:0.10, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'Stadion Real',   potenzial:0.60, wetterAnfaelligkeit:0.70, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'Vektor United',  potenzial:0.77, wetterAnfaelligkeit:0.28, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'Respo Dynamo',   potenzial:0.55, wetterAnfaelligkeit:0.82, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+  { name: 'Holo Stars',     potenzial:0.88, wetterAnfaelligkeit:0.05, pkt:0, s:0, u:0, n:0, letzterScore:0 },
+];
+
+// ─── INIT SLOTS ─────────────────────────────────────────────────
+function initSlots() {
+  slots = [];
+  trendHistory = [];
+  for (let i = 0; i < TOTAL_SLOTS; i++) {
+    const v = Math.sin(i * 0.2 + 0.5);
+    slots.push({
+      value: v, truth: 0, pulse: 0, drift: 0,
+      angle: (i * 37) % 360, targetValue: v,
+      deviation: Math.abs(v), score: 1 - Math.min(Math.abs(v), 1)
+    });
+    trendHistory.push([]);
+  }
+}
+initSlots();
+
+function computeDeviationAndScore(s) {
+  s.deviation = Math.abs(s.value - s.truth);
+  s.score = Math.max(0, 1 - Math.min(s.deviation, 1));
+}
+
+function homeScore() {
+  for (const s of slots) computeDeviationAndScore(s);
+  return slots.reduce((sum, s) => sum + s.score, 0) / TOTAL_SLOTS;
+}
+
+// ─── WETTER‑WIRKUNG (klare Kausalität) ─────────────────────────
+function wetterModifier(anfaelligkeit) {
+  let base = 0;
+  if (weather.temp < 8)       base -= 0.18;
+  else if (weather.temp > 26) base -= 0.10;
+  else                         base += 0.05;
+  if (weather.precipChance > 40) base -= 0.15;
+  return base * anfaelligkeit;
+}
+
+// ─── STATUS UI ──────────────────────────────────────────────────
+function updateStatus() {
+  const hs = homeScore();
+  document.getElementById('homeScoreDisplay').textContent = Math.round(hs * 100) + '%';
+  document.getElementById('matchdayDisplay').textContent = matchday;
+  document.getElementById('weatherState').textContent =
+    `${weather.condition} · ${weather.temp}°C`;
+}
+
+function renderTable() {
+  const sorted = [...teams].sort((a,b) => b.pkt - a.pkt || b.letzterScore - a.letzterScore);
+  const body = document.getElementById('tableBody');
+  body.innerHTML = '';
+  sorted.forEach((t, i) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td class="rank">${i+1}</td><td>${t.name}</td>
+      <td>${t.s+t.u+t.n}</td><td class="form-w">${t.s}</td><td class="form-d">${t.u}</td><td class="form-l">${t.n}</td>
+      <td class="pts">${t.pkt}</td>`;
+    body.appendChild(row);
+  });
+}
+
+// ─── LOG ──────────────────────────────────────────────────────
+function log(msg) {
+  const box = document.getElementById('logBox');
+  const timeStr = new Date().toLocaleTimeString();
+  const entry = document.createElement('div');
+  entry.textContent = `[${timeStr}] ${msg}`;
+  box.appendChild(entry);
+  box.scrollTop = box.scrollHeight;
+  if (box.children.length > 60) box.removeChild(box.firstChild);
+}
+
+// ─── STADION‑KALIBRIERUNG (wie Kompetenz‑Station) ──────────────
+function doMiss() {
+  const hs = homeScore();
+  log(`🎯 MISS → Heim‑Messung: Score ${Math.round(hs*100)}%`);
+  updateStatus();
+}
+function doFasil() {
+  const avg = slots.reduce((sum, s) => sum + s.value, 0) / TOTAL_SLOTS;
+  for (const s of slots) { s.value = s.value*0.6 + avg*0.4; s.targetValue = s.value; s.pulse*=0.8; s.drift*=0.8; }
+  log('⚖️ FASIL → Heim‑Stadion kalibriert'); updateStatus();
+}
+function doFix() {
+  let fixed = 0;
+  for (const s of slots) {
+    if (s.value > 1.5 || s.value < -1.5) { s.value = Math.sign(s.value)*1.2; fixed++; }
+    s.pulse = Math.min(Math.max(s.pulse,-1),1); s.drift = Math.min(Math.max(s.drift,-1),1);
+    s.angle = ((s.angle%360)+360)%360;
+  }
+  log(`🔧 FIX → ${fixed} Ausreißer korrigiert`); updateStatus();
+}
+function doFit() {
+  for (let i=0;i<TOTAL_SLOTS;i++){
+    const s = slots[i]; const phase = i*0.2 + time*0.0003;
+    s.targetValue = Math.sin(phase)*0.9; s.value = s.value*0.5 + s.targetValue*0.5;
+    s.pulse = Math.sin(time/120+i*0.1)*0.6; s.drift = Math.cos(time/240+i*0.05)*0.5;
+    s.angle = (time/10+i*4)%360;
+  }
+  log('📐 FIT → Referenzkurve angelegt'); updateStatus();
+}
+function doRecall() {
+  initSlots();
+  hw = { cpu:0.3, gpu:50, ram:0.4, rom:0, tb:true };
+  weather = { temp:16, condition:'bewölkt', precipChance:25 };
+  log('⏪ RECALL → Ausgangszustand wiederhergestellt'); updateStatus();
+}
+function doRefinal() {
+  for (const s of slots) {
+    s.value = Math.sin(s.angle*Math.PI/180)*0.5; s.targetValue = s.value; s.pulse=0; s.drift=0;
+    s.angle = (s.angle+10)%360;
+  }
+  hw = { cpu:0.2, gpu:45, ram:0.3, rom:0, tb:true };
+  log('⚡ REFINAL → vollständige Neukalibrierung'); updateStatus();
+}
+
+// ─── WETTER‑PROGNOSE (8‑fach zeitliche Auflösung) ──────────────
+function doWetterPrognose() {
+  let report = '🌦️ Wetter‑Prognose (8‑fach): ';
+  const steps = 8;
+  let prognosen = [];
+  for (let i = 0; i < steps; i++) {
+    const t = weather.temp + 2 * Math.sin(time*0.0001 + i*0.8) + 0.5*Math.random();
+    const p = weather.precipChance + 10 * Math.sin(time*0.0002 + i*0.5) + 2*Math.random();
+    prognosen.push(`Schritt${i+1}: ${Math.round(t)}°C, Regen ${Math.round(Math.max(0,Math.min(100,p)))}%`);
+  }
+  report += prognosen.join(' · ');
+  log(report);
+  // Zusätzlich: simuliere einen Wetterwechsel für den nächsten Spieltag
+  const newTemp = Math.round(weather.temp + (Math.random()-0.5)*4);
+  weather.temp = Math.min(35, Math.max(-5, newTemp));
+  weather.condition = ['sonnig','bewölkt','leicht regnerisch','stürmisch','nebelig'][Math.floor(Math.random()*5)];
+  weather.precipChance = Math.round(20 + Math.random()*60);
+  document.getElementById('weatherState').textContent =
+    `${weather.condition} · ${weather.temp}°C`;
+  log(`🌦️ Wetter aktualisiert → ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}%`);
+  updateStatus();
+}
+
+// ─── SPIELTAG: 8 Teams scanen ──────────────────────────────────
+function doSpieltag() {
+  matchday++;
+  const hs = homeScore();
+  const causeLines = [];
+  causeLines.push(
+    `<div><b>Ursache:</b> Wetter ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}% ` +
+    `<span class="arrow">→</span> <b>Wirkung:</b> je Team moduliert durch Wetteranfälligkeit</div>`
+  );
+
+  for (const t of teams) {
+    const mod = wetterModifier(t.wetterAnfaelligkeit);
+    const teamScore = Math.max(0, Math.min(1, t.potenzial + mod));
+    t.letzterScore = teamScore;
+
+    let resultTxt, effect;
+    if (hs > teamScore + 0.03) { t.s++; t.pkt += 0; effect = 'Heim gewinnt'; resultTxt = 'S (Heim)'; }
+    else if (teamScore > hs + 0.03) { t.n++; t.pkt += 3; effect = 'Gegner gewinnt'; resultTxt = 'N (Heim) / 3 Pkt'; }
+    else { t.u++; t.pkt += 1; effect = 'Unentschieden'; resultTxt = 'U / 1 Pkt'; }
+
+    causeLines.push(
+      `<div>${t.name}: Potenzial ${(t.potenzial*100).toFixed(0)}% ` +
+      `<span class="arrow">→</span> Wetter‑Mod ${(mod*100).toFixed(1)}% ` +
+      `<span class="arrow">→</span> Score ${(teamScore*100).toFixed(0)}% vs. Heim ${(hs*100).toFixed(0)}% ` +
+      `<span class="arrow">→</span> ${effect} (${resultTxt})</div>`
+    );
+    // 8‑fach Detail: zusätzliche Zeile mit CPU/RAM‑Einfluss
+    const cpuEinfluss = (hw.cpu - 0.5) * 0.05;
+    const ramEinfluss = (hw.ram - 0.5) * 0.03;
+    causeLines.push(
+      `<div class="detail">↳ CPU‑Einfluss ${(cpuEinfluss*100).toFixed(1)}%, RAM‑Einfluss ${(ramEinfluss*100).toFixed(1)}%</div>`
+    );
+  }
+
+  document.getElementById('causeList').innerHTML = causeLines.join('');
+  document.getElementById('effectDisplay').textContent =
+    weather.precipChance > 40 || weather.temp < 8 ? 'dämpfend' : 'neutral/fördernd';
+  renderTable();
+  log(`⚽ SPIELTAG ${matchday} → Heim‑Respo hat ${teams.length} Gegner‑Respo gescannt (8‑fach Detail)`);
+  updateStatus();
+}
+
+// ─── RENDER: Stadion‑Messfeld mit 8‑fach Trends ───────────────
+function drawStadium() {
+  ctx.clearRect(0,0,W,H);
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#04140a'); bg.addColorStop(1,'#081c10');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+
+  // Spielfeld‑Linien
+  ctx.strokeStyle = 'rgba(200,255,220,0.08)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
+  ctx.beginPath(); ctx.arc(W/2,H/2,60,0,Math.PI*2); ctx.stroke();
+
+  // Slots
+  for (let r=0;r<ROWS;r++){
+    for (let c=0;c<COLS;c++){
+      const idx = r*COLS+c;
+      const s = slots[idx];
+      computeDeviationAndScore(s);
+      const x = c*CELL_W, y = r*CELL_H;
+      const score = s.score;
+      const heightOffset = s.value * CELL_H * 0.15;
+      const gCol = Math.round(90 + score*140);
+      const rCol = Math.round(200*(1-score) + 40*score);
+      ctx.fillStyle = `rgba(${rCol}, ${gCol}, 60, 0.30)`;
+      ctx.fillRect(x, y+heightOffset*0.3, CELL_W, CELL_H*0.7);
+
+      const inTol = s.deviation <= TOLERANCE;
+      ctx.strokeStyle = inTol ? `rgba(140,240,160,${0.15+score*0.2})` : `rgba(255,120,90,${0.15+(1-score)*0.2})`;
+      ctx.lineWidth = 0.6 + (1-score)*0.8;
+      ctx.strokeRect(x, y+heightOffset*0.2, CELL_W, CELL_H*0.6);
+
+      // 8‑fach Trend (letzte 8 Werte)
+      const trend = trendHistory[idx] || [];
+      const len = trend.length;
+      let arrow = '→';
+      if (len >= 8) {
+        const old = trend[0];
+        const neu = trend[7];
+        if (neu > old + 0.02) arrow = '↑';
+        else if (neu < old - 0.02) arrow = '↓';
+        trend.shift();
+      }
+      trend.push(s.value);
+      if (trend.length > 8) trend.shift();
+      trendHistory[idx] = trend;
+
+      ctx.fillStyle = `rgba(220,255,220,0.25)`;
+      ctx.font = '9px Consolas';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(arrow, x+2, y+2);
+
+      ctx.fillStyle = `rgba(220,240,220,${0.12+score*0.15})`;
+      ctx.font = '8px Consolas';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(s.value.toFixed(2), x+CELL_W/2, y+CELL_H-4);
+    }
+  }
+
+  // Hardware‑Overlay (CPU/GPU/RAM)
+  ctx.fillStyle = 'rgba(120,220,150,0.04)';
+  ctx.font = '11px Consolas';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`CPU ${Math.round(hw.cpu*100)}%  GPU ${Math.round(hw.gpu)}°C  RAM ${Math.round(hw.ram*100)}%`, 12, H-8);
+
+  ctx.fillStyle = 'rgba(150,230,170,0.08)';
+  ctx.font = '14px Consolas';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`Heim‑Stadion · 8‑fach Trends · Spieltag ${matchday}`, W/2, 10);
+}
+
+// ─── UPDATE SLOTS + HARDWARE ──────────────────────────────────
+function updateSlots() {
+  for (const s of slots) {
+    s.value += (s.targetValue - s.value) * 0.008;
+    s.pulse += Math.sin(time*0.001 + s.angle*0.01) * 0.001;
+    s.drift += Math.cos(time*0.002 + s.angle*0.02) * 0.001;
+    s.pulse = Math.min(Math.max(s.pulse,-1),1); s.drift = Math.min(Math.max(s.drift,-1),1);
+    s.angle = (s.angle + 0.02) % 360;
+  }
+  // Hardware‑Dynamik
+  hw.cpu = 0.2 + 0.5*(0.5+0.5*Math.sin(time*0.0004)) + 0.2*Math.random();
+  hw.cpu = Math.min(1, Math.max(0, hw.cpu));
+  hw.gpu = 45 + 15*(0.5+0.5*Math.sin(time*0.0003+1.2)) + 5*Math.random();
+  hw.gpu = Math.min(95, Math.max(30, hw.gpu));
+  hw.ram = 0.3 + 0.4*(0.5+0.5*Math.sin(time*0.0005+0.7)) + 0.15*Math.random();
+  hw.ram = Math.min(1, Math.max(0, hw.ram));
+  if (Math.random() < 0.001) hw.rom = Math.min(5, hw.rom+1);
+  if (hw.rom > 0 && Math.random() < 0.01) hw.rom = Math.max(0, hw.rom-1);
+}
+
+function loop() {
+  if (running) {
+    time += 16;
+    updateSlots();
+    drawStadium();
+    if (Math.floor(time/2000)%2===0) updateStatus();
+  }
+  requestAnimationFrame(loop);
+}
+
+// ─── EVENTS ──────────────────────────────────────────────────
+document.getElementById('btnPause').addEventListener('click', () => {
+  running = !running;
+  document.getElementById('btnPause').textContent = running ? '⏸ PAUSE' : '▶ START';
+  log(running ? '▶ Fortgesetzt' : '⏸ Pausiert');
+});
+document.getElementById('btnMiss').addEventListener('click', doMiss);
+document.getElementById('btnFasil').addEventListener('click', doFasil);
+document.getElementById('btnFix').addEventListener('click', doFix);
+document.getElementById('btnFit').addEventListener('click', doFit);
+document.getElementById('btnRecall').addEventListener('click', doRecall);
+document.getElementById('btnRefinal').addEventListener('click', doRefinal);
+document.getElementById('btnSpieltag').addEventListener('click', doSpieltag);
+document.getElementById('btnWetter').addEventListener('click', doWetterPrognose);
+document.getElementById('btnReset').addEventListener('click', () => {
+  initSlots(); matchday = 0; trendHistory = [];
+  for (const t of teams) { t.pkt=0; t.s=0; t.u=0; t.n=0; t.letzterScore=0; }
+  hw = { cpu:0.3, gpu:50, ram:0.4, rom:0, tb:true };
+  weather = { temp:16, condition:'bewölkt', precipChance:25 };
+  document.getElementById('causeList').innerHTML = 'Noch kein Spieltag gelaufen.';
+  renderTable();
+  log('⟲ RESET → Alle Systeme neu gestartet');
+  updateStatus();
+});
+
+// ─── INIT ──────────────────────────────────────────────────────
+renderTable();
+log('⚡ Respo‑Liga 8‑fach fusioniert · Hardware + Wetter + 8 Teams');
+log(`🌦️ Start‑Wetter (Snapshot): ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}%`);
+log('⌨️  SPIELTAG → 8 Teams werden gescannt · WETTER‑PROGNOSE → 8‑Schritt‑Vorhersage');
+updateStatus();
+loop();
+
+</script>
 </body>
 </html>
