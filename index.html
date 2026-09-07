@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚡ Respo‑Liga · Hardware · Wetter · 8‑fach Präzision</title>
+<title>⚽ Respo‑Liga · Dreieck‑Screen Emulation</title>
 <style>
   * { box-sizing:border-box; margin:0; padding:0; }
   body {
@@ -69,25 +69,21 @@
     border-bottom:1px solid rgba(120,220,150,0.15);
   }
   tbody td { padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.03); }
-  tbody tr.home { background:rgba(120,220,150,0.06); }
   .pts { font-weight:bold; color:#ffcf8c; }
   .rank { color:#7a8a9a; width:22px; }
   .form-w { color:#8cf0a0; }
   .form-d { color:#f0d080; }
   .form-l { color:#ff6b6b; }
 
-  .cause-list { font-size:12px; line-height:1.7; color:#c8d8c0; max-height:220px; overflow-y:auto; }
+  .cause-list { font-size:12px; line-height:1.7; color:#c8d8c0; max-height:180px; overflow-y:auto; }
   .cause-list::-webkit-scrollbar { width:3px; }
   .cause-list::-webkit-scrollbar-thumb { background:#2a3a2a; border-radius:4px; }
   .cause-list .arrow { color:#7ee0a0; }
-  .cause-list .detail { padding-left:16px; font-size:11px; color:#9ab8a2; }
 
-  .hw-row { display:flex; justify-content:space-between; padding:3px 0; font-size:12px; border-bottom:1px solid rgba(255,255,255,0.03); }
-  .hw-row .label { color:#9a8a7a; }
-  .hw-row .val { font-weight:bold; }
-  .hw-row .val.green { color:#8cf0a0; }
-  .hw-row .val.yellow { color:#f5d080; }
-  .hw-row .val.red { color:#ff6b6b; }
+  .tri-grid {
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px;
+  }
+  @media (max-width:700px){ .tri-grid { grid-template-columns:1fr; } }
 
   .control-grid {
     display:grid; grid-template-columns:repeat(auto-fit,minmax(80px,1fr));
@@ -116,22 +112,27 @@
     text-align:center; color:#3a4a5a; font-size:10px; margin-top:16px;
     border-top:1px solid rgba(120,220,150,0.05); padding-top:10px;
   }
+
+  /* Dreieck-Overlay Canvas (klein) */
+  #triCanvas {
+    width:100%; aspect-ratio:1/1; background:#000; border-radius:12px;
+    border:1px solid rgba(120,220,150,0.1);
+  }
 </style>
 </head>
 <body>
 <div class="container">
 
 <header>
-  <h1>⚡ Respo‑Liga · Hardware · Wetter · 8‑fach Präzision</h1>
-  <span class="badge">● fusioniert · 8 Teams · 8‑fache Simulation</span>
+  <h1>⚽ Respo‑Liga · Dreieck‑Screen Emulation</h1>
+  <span class="badge">● Stadion · Wetter · Triangulierte Messwerte</span>
 </header>
 
 <div class="note">
-  <b>Ehrlich & funktional:</b> CPU/GPU/RAM/ROM/TB sind simulierte Hardware‑Werte (Math.sin/random),
-  das Wetter ist ein echter Live‑Snapshot für Hannover (16°C, bewölkt).
-  Beim <b>Spieltag</b> scannt der Heim‑Respo (Stadion‑Messfeld) 8 Gegner‑Teams,
-  bewertet sie unter Wetter‑Einfluss (Ursache → Wirkung) und aktualisiert die Liga‑Tabelle.
-  Alle 8 Teams haben individuelle Stärke & Wetteranfälligkeit – kein Zufall, klare Kausalität.
+  <b>Ehrlich & funktional:</b> CPU/GPU/RAM/ROM/TB sind simulierte Werte (Math.sin/random),
+  Wetter ist ein Snapshot (Hannover, 16°C).<br>
+  <b>Neu: Dreieck‑Screen‑Emulation</b> – die 81 Slots werden als <b>trianguliertes Mesh</b> dargestellt,
+  Farben = Slot‑Score, Höhe = Wert. Zeigt die räumliche Verteilung der Messwerte.
 </div>
 
 <!-- STATUS -->
@@ -153,18 +154,17 @@
       <button class="btn primary" id="btnFit">📐 FIT</button>
       <button class="btn warn" id="btnRecall">⏪ RECALL</button>
       <button class="btn danger" id="btnRefinal">⚡ REFINAL</button>
-      <button class="btn big" id="btnSpieltag">⚽ SPIELTAG (8 Teams scanen)</button>
+      <button class="btn big" id="btnSpieltag">⚽ SPIELTAG (Respo scannt Respo)</button>
       <button class="btn" id="btnReset">⟲ RESET</button>
       <button class="btn" id="btnPause">⏸ PAUSE</button>
-      <button class="btn primary" id="btnWetter">🌦️ WETTER‑PROGNOSE (8‑fach)</button>
     </div>
 
-    <div class="log-box" id="logBox">[init] Respo‑Liga 8‑fach geladen …</div>
+    <div class="log-box" id="logBox">[init] Respo‑Liga + Dreieck‑Emulation geladen …</div>
   </div>
 
   <div>
     <div class="panel" style="margin-bottom:16px;">
-      <h2>🏆 Liga‑Tabelle (8 Teams)</h2>
+      <h2>🏆 Liga‑Tabelle (Respo scannt Respo)</h2>
       <table>
         <thead>
           <tr><th class="rank">#</th><th>Team</th><th>Sp</th><th>S</th><th>U</th><th>N</th><th class="pts">Pkt</th></tr>
@@ -174,29 +174,40 @@
     </div>
 
     <div class="panel">
+      <h2>🌀 Dreieck‑Screen Emulation</h2>
+      <canvas id="triCanvas" width="300" height="300"></canvas>
+      <div style="font-size:11px; color:#8ab89a; margin-top:6px;">
+        Triangulierte Slot‑Werte · Farben = Score · Höhe = Wert
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px;">
       <h2>🌦️ Ursache → Wirkung (aktueller Spieltag)</h2>
       <div class="cause-list" id="causeList">Noch kein Spieltag gelaufen.</div>
     </div>
   </div>
 </div>
 
-<div class="footer">⚖️ iki1uc · QUEAST‑kompatibel · Pipeline 3/6 · 8‑fach Präzision</div>
+<div class="footer">⚖️ iki1uc · QUEAST‑kompatibel · Dreieck‑Screen · Pipeline 3/6</div>
 </div>
 
 <script>
 "use strict";
 
 // ================================================================
-//  RESPO‑LIGA · HARDWARE · WETTER · 8‑FACH PRÄZISION
-//  Fusion aus Kompetenz‑Messstation + Respo‑Liga.
-//  8 Teams, 8‑fach höhere zeitliche Auflösung für Wetter‑Prognose,
-//  8‑fache Detail‑Anzeige pro Team (Trend‑Pfeile im Canvas).
+//  RESPO‑LIGA · STADION · WETTER · DREIECK‑SCREEN EMULATION
+//  + Dreieck‑Mesh (Triangulation der 81 Slots)
 // ================================================================
 
-// ─── CANVAS (Heim‑Stadion Messfeld, 9×9 Slots) ────────────────
-const canvas = document.getElementById('mainCanvas');
-const ctx = canvas.getContext('2d');
-const W = canvas.width, H = canvas.height;
+// ─── CANVAS (Haupt‑Stadion) ─────────────────────────────────────
+const mainCanvas = document.getElementById('mainCanvas');
+const ctx = mainCanvas.getContext('2d');
+const W = mainCanvas.width, H = mainCanvas.height;
+
+// ─── Dreieck‑Canvas ─────────────────────────────────────────────
+const triCanvas = document.getElementById('triCanvas');
+const triCtx = triCanvas.getContext('2d');
+const TW = triCanvas.width, TH = triCanvas.height;
 
 const TOTAL_SLOTS = 81, COLS = 9, ROWS = 9;
 const CELL_W = W / COLS, CELL_H = H / ROWS;
@@ -206,34 +217,26 @@ let slots = [];
 let running = true;
 let time = 0;
 let matchday = 0;
-let trendHistory = []; // für 8‑fach Trends (letzte 8 Werte pro Slot)
 
-// ─── Hardware‑Simulation (wie Kompetenz‑Station) ──────────────
-let hw = { cpu:0.3, gpu:50, ram:0.4, rom:0, tb:true };
-
-// ─── Reales Start‑Wetter (Snapshot Hannover) ──────────────────
+// ─── Wetter (Snapshot) ──────────────────────────────────────────
 let weather = {
   temp: 16,
   condition: 'bewölkt',
   precipChance: 25,
 };
 
-// ─── 8 Teams (statt 5) ─────────────────────────────────────────
+// ─── 5 Respo‑Teams ──────────────────────────────────────────────
 const teams = [
   { name: 'FC Atom',        potenzial:0.82, wetterAnfaelligkeit:0.15, pkt:0, s:0, u:0, n:0, letzterScore:0 },
   { name: 'SV Wahrheit',    potenzial:0.74, wetterAnfaelligkeit:0.35, pkt:0, s:0, u:0, n:0, letzterScore:0 },
   { name: 'IQQ Athletic',   potenzial:0.68, wetterAnfaelligkeit:0.55, pkt:0, s:0, u:0, n:0, letzterScore:0 },
   { name: 'Kompetenz FC',   potenzial:0.90, wetterAnfaelligkeit:0.10, pkt:0, s:0, u:0, n:0, letzterScore:0 },
   { name: 'Stadion Real',   potenzial:0.60, wetterAnfaelligkeit:0.70, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'Vektor United',  potenzial:0.77, wetterAnfaelligkeit:0.28, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'Respo Dynamo',   potenzial:0.55, wetterAnfaelligkeit:0.82, pkt:0, s:0, u:0, n:0, letzterScore:0 },
-  { name: 'Holo Stars',     potenzial:0.88, wetterAnfaelligkeit:0.05, pkt:0, s:0, u:0, n:0, letzterScore:0 },
 ];
 
-// ─── INIT SLOTS ─────────────────────────────────────────────────
+// ─── SLOTS ──────────────────────────────────────────────────────
 function initSlots() {
   slots = [];
-  trendHistory = [];
   for (let i = 0; i < TOTAL_SLOTS; i++) {
     const v = Math.sin(i * 0.2 + 0.5);
     slots.push({
@@ -241,7 +244,6 @@ function initSlots() {
       angle: (i * 37) % 360, targetValue: v,
       deviation: Math.abs(v), score: 1 - Math.min(Math.abs(v), 1)
     });
-    trendHistory.push([]);
   }
 }
 initSlots();
@@ -256,7 +258,7 @@ function homeScore() {
   return slots.reduce((sum, s) => sum + s.score, 0) / TOTAL_SLOTS;
 }
 
-// ─── WETTER‑WIRKUNG (klare Kausalität) ─────────────────────────
+// ─── WETTER‑MODIFIER ────────────────────────────────────────────
 function wetterModifier(anfaelligkeit) {
   let base = 0;
   if (weather.temp < 8)       base -= 0.18;
@@ -288,7 +290,6 @@ function renderTable() {
   });
 }
 
-// ─── LOG ──────────────────────────────────────────────────────
 function log(msg) {
   const box = document.getElementById('logBox');
   const timeStr = new Date().toLocaleTimeString();
@@ -299,7 +300,7 @@ function log(msg) {
   if (box.children.length > 60) box.removeChild(box.firstChild);
 }
 
-// ─── STADION‑KALIBRIERUNG (wie Kompetenz‑Station) ──────────────
+// ─── STADION‑FUNKTIONEN ────────────────────────────────────────
 function doMiss() {
   const hs = homeScore();
   log(`🎯 MISS → Heim‑Messung: Score ${Math.round(hs*100)}%`);
@@ -330,50 +331,24 @@ function doFit() {
 }
 function doRecall() {
   initSlots();
-  hw = { cpu:0.3, gpu:50, ram:0.4, rom:0, tb:true };
-  weather = { temp:16, condition:'bewölkt', precipChance:25 };
-  log('⏪ RECALL → Ausgangszustand wiederhergestellt'); updateStatus();
+  log('⏪ RECALL → Heim‑Stadion zurückgesetzt'); updateStatus();
 }
 function doRefinal() {
   for (const s of slots) {
     s.value = Math.sin(s.angle*Math.PI/180)*0.5; s.targetValue = s.value; s.pulse=0; s.drift=0;
     s.angle = (s.angle+10)%360;
   }
-  hw = { cpu:0.2, gpu:45, ram:0.3, rom:0, tb:true };
   log('⚡ REFINAL → vollständige Neukalibrierung'); updateStatus();
 }
 
-// ─── WETTER‑PROGNOSE (8‑fach zeitliche Auflösung) ──────────────
-function doWetterPrognose() {
-  let report = '🌦️ Wetter‑Prognose (8‑fach): ';
-  const steps = 8;
-  let prognosen = [];
-  for (let i = 0; i < steps; i++) {
-    const t = weather.temp + 2 * Math.sin(time*0.0001 + i*0.8) + 0.5*Math.random();
-    const p = weather.precipChance + 10 * Math.sin(time*0.0002 + i*0.5) + 2*Math.random();
-    prognosen.push(`Schritt${i+1}: ${Math.round(t)}°C, Regen ${Math.round(Math.max(0,Math.min(100,p)))}%`);
-  }
-  report += prognosen.join(' · ');
-  log(report);
-  // Zusätzlich: simuliere einen Wetterwechsel für den nächsten Spieltag
-  const newTemp = Math.round(weather.temp + (Math.random()-0.5)*4);
-  weather.temp = Math.min(35, Math.max(-5, newTemp));
-  weather.condition = ['sonnig','bewölkt','leicht regnerisch','stürmisch','nebelig'][Math.floor(Math.random()*5)];
-  weather.precipChance = Math.round(20 + Math.random()*60);
-  document.getElementById('weatherState').textContent =
-    `${weather.condition} · ${weather.temp}°C`;
-  log(`🌦️ Wetter aktualisiert → ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}%`);
-  updateStatus();
-}
-
-// ─── SPIELTAG: 8 Teams scanen ──────────────────────────────────
+// ─── SPIELTAG ──────────────────────────────────────────────────
 function doSpieltag() {
   matchday++;
   const hs = homeScore();
   const causeLines = [];
   causeLines.push(
     `<div><b>Ursache:</b> Wetter ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}% ` +
-    `<span class="arrow">→</span> <b>Wirkung:</b> je Team moduliert durch Wetteranfälligkeit</div>`
+    `<span class="arrow">→</span> <b>Wirkung:</b> je Team nach Wetteranfälligkeit</div>`
   );
 
   for (const t of teams) {
@@ -381,7 +356,7 @@ function doSpieltag() {
     const teamScore = Math.max(0, Math.min(1, t.potenzial + mod));
     t.letzterScore = teamScore;
 
-    let resultTxt, effect;
+    let effect, resultTxt;
     if (hs > teamScore + 0.03) { t.s++; t.pkt += 0; effect = 'Heim gewinnt'; resultTxt = 'S (Heim)'; }
     else if (teamScore > hs + 0.03) { t.n++; t.pkt += 3; effect = 'Gegner gewinnt'; resultTxt = 'N (Heim) / 3 Pkt'; }
     else { t.u++; t.pkt += 1; effect = 'Unentschieden'; resultTxt = 'U / 1 Pkt'; }
@@ -392,40 +367,30 @@ function doSpieltag() {
       `<span class="arrow">→</span> Score ${(teamScore*100).toFixed(0)}% vs. Heim ${(hs*100).toFixed(0)}% ` +
       `<span class="arrow">→</span> ${effect} (${resultTxt})</div>`
     );
-    // 8‑fach Detail: zusätzliche Zeile mit CPU/RAM‑Einfluss
-    const cpuEinfluss = (hw.cpu - 0.5) * 0.05;
-    const ramEinfluss = (hw.ram - 0.5) * 0.03;
-    causeLines.push(
-      `<div class="detail">↳ CPU‑Einfluss ${(cpuEinfluss*100).toFixed(1)}%, RAM‑Einfluss ${(ramEinfluss*100).toFixed(1)}%</div>`
-    );
   }
 
   document.getElementById('causeList').innerHTML = causeLines.join('');
   document.getElementById('effectDisplay').textContent =
     weather.precipChance > 40 || weather.temp < 8 ? 'dämpfend' : 'neutral/fördernd';
   renderTable();
-  log(`⚽ SPIELTAG ${matchday} → Heim‑Respo hat ${teams.length} Gegner‑Respo gescannt (8‑fach Detail)`);
+  log(`⚽ SPIELTAG ${matchday} → Heim‑Respo hat ${teams.length} Gegner gescannt`);
   updateStatus();
 }
 
-// ─── RENDER: Stadion‑Messfeld mit 8‑fach Trends ───────────────
+// ─── HAUPT‑RENDER (Stadion) ────────────────────────────────────
 function drawStadium() {
   ctx.clearRect(0,0,W,H);
   const bg = ctx.createLinearGradient(0,0,0,H);
   bg.addColorStop(0,'#04140a'); bg.addColorStop(1,'#081c10');
   ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
 
-  // Spielfeld‑Linien
   ctx.strokeStyle = 'rgba(200,255,220,0.08)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke();
   ctx.beginPath(); ctx.arc(W/2,H/2,60,0,Math.PI*2); ctx.stroke();
 
-  // Slots
   for (let r=0;r<ROWS;r++){
     for (let c=0;c<COLS;c++){
-      const idx = r*COLS+c;
-      const s = slots[idx];
-      computeDeviationAndScore(s);
+      const idx = r*COLS+c; const s = slots[idx]; computeDeviationAndScore(s);
       const x = c*CELL_W, y = r*CELL_H;
       const score = s.score;
       const heightOffset = s.value * CELL_H * 0.15;
@@ -439,50 +404,110 @@ function drawStadium() {
       ctx.lineWidth = 0.6 + (1-score)*0.8;
       ctx.strokeRect(x, y+heightOffset*0.2, CELL_W, CELL_H*0.6);
 
-      // 8‑fach Trend (letzte 8 Werte)
-      const trend = trendHistory[idx] || [];
-      const len = trend.length;
-      let arrow = '→';
-      if (len >= 8) {
-        const old = trend[0];
-        const neu = trend[7];
-        if (neu > old + 0.02) arrow = '↑';
-        else if (neu < old - 0.02) arrow = '↓';
-        trend.shift();
-      }
-      trend.push(s.value);
-      if (trend.length > 8) trend.shift();
-      trendHistory[idx] = trend;
-
-      ctx.fillStyle = `rgba(220,255,220,0.25)`;
-      ctx.font = '9px Consolas';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(arrow, x+2, y+2);
-
       ctx.fillStyle = `rgba(220,240,220,${0.12+score*0.15})`;
-      ctx.font = '8px Consolas';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'bottom';
+      ctx.font = '8px Consolas'; ctx.textAlign='center'; ctx.textBaseline='bottom';
       ctx.fillText(s.value.toFixed(2), x+CELL_W/2, y+CELL_H-4);
     }
   }
 
-  // Hardware‑Overlay (CPU/GPU/RAM)
-  ctx.fillStyle = 'rgba(120,220,150,0.04)';
-  ctx.font = '11px Consolas';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'bottom';
-  ctx.fillText(`CPU ${Math.round(hw.cpu*100)}%  GPU ${Math.round(hw.gpu)}°C  RAM ${Math.round(hw.ram*100)}%`, 12, H-8);
-
   ctx.fillStyle = 'rgba(150,230,170,0.08)';
-  ctx.font = '14px Consolas';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText(`Heim‑Stadion · 8‑fach Trends · Spieltag ${matchday}`, W/2, 10);
+  ctx.font = '14px Consolas'; ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(`Heim‑Stadion · Messfeld · Spieltag ${matchday}`, W/2, 10);
 }
 
-// ─── UPDATE SLOTS + HARDWARE ──────────────────────────────────
+// ─── DREIECK‑SCREEN EMULATION ──────────────────────────────────
+function drawTriangleScreen() {
+  triCtx.clearRect(0,0,TW,TH);
+  const bg = triCtx.createRadialGradient(TW/2,TH/2,10,TW/2,TH/2,TW);
+  bg.addColorStop(0,'#081a10'); bg.addColorStop(1,'#020806');
+  triCtx.fillStyle = bg; triCtx.fillRect(0,0,TW,TH);
+
+  // Punkte aus den Slots (9x9 → wir nehmen 9 zufällige Punkte für ein Dreieck‑Mesh)
+  const pts = [];
+  for (let r=0; r<ROWS; r++){
+    for (let c=0; c<COLS; c++){
+      const idx = r*COLS+c;
+      const s = slots[idx];
+      const x = (c / (COLS-1)) * TW;
+      const y = (r / (ROWS-1)) * TH;
+      const z = s.score; // Höhe = Score
+      pts.push({x, y, z});
+    }
+  }
+
+  // Delaunay‑ähnliche Triangulation: verbinde benachbarte Punkte
+  // Wir zeichnen ein Dreiecks‑Netz aus 9×9 Punkten
+  const triColor = (z) => {
+    const r = Math.round(200*(1-z) + 40*z);
+    const g = Math.round(90 + z*140);
+    return `rgba(${r}, ${g}, 60, ${0.2 + z*0.4})`;
+  };
+
+  // Zeichne Dreiecke (jeweils 2 Dreiecke pro Zelle)
+  for (let r=0; r<ROWS-1; r++){
+    for (let c=0; c<COLS-1; c++){
+      const idx = r*COLS+c;
+      const idxR = (r+1)*COLS+c;
+      const idxC = r*COLS+(c+1);
+      const idxRC = (r+1)*COLS+(c+1);
+
+      const p0 = pts[idx];
+      const p1 = pts[idxR];
+      const p2 = pts[idxC];
+      const p3 = pts[idxRC];
+
+      if (!p0 || !p1 || !p2 || !p3) continue;
+
+      // Dreieck 1: p0-p1-p2
+      triCtx.beginPath();
+      triCtx.moveTo(p0.x, p0.y);
+      triCtx.lineTo(p1.x, p1.y);
+      triCtx.lineTo(p2.x, p2.y);
+      triCtx.closePath();
+      const avgZ1 = (p0.z + p1.z + p2.z) / 3;
+      triCtx.fillStyle = triColor(avgZ1);
+      triCtx.fill();
+      triCtx.strokeStyle = 'rgba(120,220,150,0.08)';
+      triCtx.lineWidth = 0.5;
+      triCtx.stroke();
+
+      // Dreieck 2: p1-p3-p2
+      triCtx.beginPath();
+      triCtx.moveTo(p1.x, p1.y);
+      triCtx.lineTo(p3.x, p3.y);
+      triCtx.lineTo(p2.x, p2.y);
+      triCtx.closePath();
+      const avgZ2 = (p1.z + p3.z + p2.z) / 3;
+      triCtx.fillStyle = triColor(avgZ2);
+      triCtx.fill();
+      triCtx.strokeStyle = 'rgba(120,220,150,0.08)';
+      triCtx.lineWidth = 0.5;
+      triCtx.stroke();
+    }
+  }
+
+  // Punkte (Knoten) zeichnen
+  for (const p of pts) {
+    const radius = 2 + p.z * 3;
+    triCtx.beginPath();
+    triCtx.arc(p.x, p.y, radius, 0, Math.PI*2);
+    const col = triColor(p.z);
+    triCtx.fillStyle = col;
+    triCtx.fill();
+    triCtx.strokeStyle = 'rgba(200,255,220,0.15)';
+    triCtx.lineWidth = 0.5;
+    triCtx.stroke();
+  }
+
+  // Titel
+  triCtx.fillStyle = 'rgba(150,230,170,0.06)';
+  triCtx.font = '10px Consolas';
+  triCtx.textAlign = 'center';
+  triCtx.textBaseline = 'top';
+  triCtx.fillText('Dreieck‑Screen · Triangulierte Slots', TW/2, 4);
+}
+
+// ─── UPDATE SLOTS ──────────────────────────────────────────────
 function updateSlots() {
   for (const s of slots) {
     s.value += (s.targetValue - s.value) * 0.008;
@@ -491,15 +516,6 @@ function updateSlots() {
     s.pulse = Math.min(Math.max(s.pulse,-1),1); s.drift = Math.min(Math.max(s.drift,-1),1);
     s.angle = (s.angle + 0.02) % 360;
   }
-  // Hardware‑Dynamik
-  hw.cpu = 0.2 + 0.5*(0.5+0.5*Math.sin(time*0.0004)) + 0.2*Math.random();
-  hw.cpu = Math.min(1, Math.max(0, hw.cpu));
-  hw.gpu = 45 + 15*(0.5+0.5*Math.sin(time*0.0003+1.2)) + 5*Math.random();
-  hw.gpu = Math.min(95, Math.max(30, hw.gpu));
-  hw.ram = 0.3 + 0.4*(0.5+0.5*Math.sin(time*0.0005+0.7)) + 0.15*Math.random();
-  hw.ram = Math.min(1, Math.max(0, hw.ram));
-  if (Math.random() < 0.001) hw.rom = Math.min(5, hw.rom+1);
-  if (hw.rom > 0 && Math.random() < 0.01) hw.rom = Math.max(0, hw.rom-1);
 }
 
 function loop() {
@@ -507,6 +523,7 @@ function loop() {
     time += 16;
     updateSlots();
     drawStadium();
+    drawTriangleScreen();
     if (Math.floor(time/2000)%2===0) updateStatus();
   }
   requestAnimationFrame(loop);
@@ -525,23 +542,20 @@ document.getElementById('btnFit').addEventListener('click', doFit);
 document.getElementById('btnRecall').addEventListener('click', doRecall);
 document.getElementById('btnRefinal').addEventListener('click', doRefinal);
 document.getElementById('btnSpieltag').addEventListener('click', doSpieltag);
-document.getElementById('btnWetter').addEventListener('click', doWetterPrognose);
 document.getElementById('btnReset').addEventListener('click', () => {
-  initSlots(); matchday = 0; trendHistory = [];
+  initSlots(); matchday = 0;
   for (const t of teams) { t.pkt=0; t.s=0; t.u=0; t.n=0; t.letzterScore=0; }
-  hw = { cpu:0.3, gpu:50, ram:0.4, rom:0, tb:true };
-  weather = { temp:16, condition:'bewölkt', precipChance:25 };
-  document.getElementById('causeList').innerHTML = 'Noch kein Spieltag gelaufen.';
+  document.getElementById('causeList').textContent = 'Noch kein Spieltag gelaufen.';
   renderTable();
-  log('⟲ RESET → Alle Systeme neu gestartet');
+  log('⟲ RESET → Stadion & Liga neu gestartet');
   updateStatus();
 });
 
 // ─── INIT ──────────────────────────────────────────────────────
 renderTable();
-log('⚡ Respo‑Liga 8‑fach fusioniert · Hardware + Wetter + 8 Teams');
-log(`🌦️ Start‑Wetter (Snapshot): ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}%`);
-log('⌨️  SPIELTAG → 8 Teams werden gescannt · WETTER‑PROGNOSE → 8‑Schritt‑Vorhersage');
+log('⚽ Respo‑Liga + Dreieck‑Screen Emulation initialisiert');
+log(`🌦️ Wetter: ${weather.condition}, ${weather.temp}°C, Regen ${weather.precipChance}%`);
+log('⌨️  Klicke SPIELTAG für Scans · Dreieck zeigt triangulierte Slot‑Werte');
 updateStatus();
 loop();
 
